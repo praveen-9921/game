@@ -1,0 +1,180 @@
+<!-- sixth trial -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Prediction Game</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        }
+        .balance {
+            background: blue;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .colors button, .numbers button {
+            width: 100px;
+            height: 50px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+        }
+        .red { background-color: red; }
+        .green { background-color: green; }
+        .violet { background-color: purple; }
+        .numbers button { background-color: purple; width: 60px; }
+        .timer {
+            font-size: 20px;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="balance">
+            <h3>Available Balance: ₹<span id="balance">1000</span></h3>
+        </div>
+        <button onclick="recharge()">Recharge</button>
+        <button onclick="showRules()">Read Rule</button>
+        <hr>
+        <h3>Period: <span id="period">20220626043</span></h3>
+        <div class="timer">Count Down: <span id="countdown">01:00</span></div>
+        <div class="colors">
+            <button class="green" onclick="placeBet('green')">Join Green</button>
+            <button class="violet" onclick="placeBet('violet')">Join Violet</button>
+            <button class="red" onclick="placeBet('red')">Join Red</button>
+        </div>
+        <hr>
+        <div class="numbers">
+            <button onclick="placeBet(0)">0</button>
+            <button onclick="placeBet(1)">1</button>
+            <button onclick="placeBet(2)">2</button>
+            <button onclick="placeBet(3)">3</button>
+            <button onclick="placeBet(4)">4</button>
+            <button onclick="placeBet(5)">5</button>
+            <button onclick="placeBet(6)">6</button>
+            <button onclick="placeBet(7)">7</button>
+            <button onclick="placeBet(8)">8</button>
+            <button onclick="placeBet(9)">9</button>
+        </div>
+        <p>Result: <span id="result">-</span></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Winning Number</th>
+                    <th>Winning Color</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody id="resultTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let balance = 1000;
+        let countdown = 60;
+        let userBets = [];
+        let bettingAllowed = true;
+        let round = 1;
+
+        function updateCountdown() {
+            let minutes = Math.floor(countdown / 60);
+            let seconds = countdown % 60;
+            document.getElementById("countdown").textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            if (countdown > 0) {
+                countdown--;
+                setTimeout(updateCountdown, 1000);
+            } else {
+                showResults();
+            }
+        }
+        updateCountdown();
+
+        function placeBet(choice) {
+            if (!bettingAllowed) {
+                alert("You have already placed a bet. Wait for the result.");
+                return;
+            }
+            if (countdown <= 30) {
+                alert("Betting is closed for this round.");
+                return;
+            }
+            let betAmount = parseInt(prompt("Enter your bet amount:"));
+            if (isNaN(betAmount) || betAmount <= 0 || betAmount > balance) {
+                alert("Invalid bet amount!");
+                return;
+            }
+            userBets.push({ choice, betAmount });
+            balance -= betAmount;
+            document.getElementById("balance").textContent = balance;
+            bettingAllowed = false;
+            alert(`Bet placed on ${choice} with ₹${betAmount}`);
+        }
+
+        function showResults() {
+            const colors = ['red', 'green', 'violet'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const randomNumber = Math.floor(Math.random() * 10);
+            let totalWinnings = 0;
+            let userWin = "Lost";
+            
+            userBets.forEach(bet => {
+                if (bet.choice === randomColor || bet.choice === randomNumber) {
+                    totalWinnings += bet.betAmount * 2;
+                    userWin = "Won";
+                }
+            });
+            
+            balance += totalWinnings;
+            document.getElementById("balance").textContent = balance;
+            document.getElementById("result").textContent = `Winning Color: ${randomColor}, Winning Number: ${randomNumber}`;
+            
+            let resultTable = document.getElementById("resultTable");
+            let newRow = `<tr><td>${round}</td><td>${randomNumber}</td><td>${randomColor}</td><td>${userWin}</td></tr>`;
+            resultTable.innerHTML += newRow;
+            round++;
+            
+            userBets = [];
+            bettingAllowed = true;
+            
+            setTimeout(() => {
+                countdown = 60;
+                updateCountdown();
+                document.getElementById("result").textContent = "-";
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
