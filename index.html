@@ -1,8 +1,6 @@
-<!-- sixth trial -->
-
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,21 +12,43 @@
             margin: 20px;
             background-color: #f4f4f4;
         }
+
         .container {
             max-width: 500px;
             margin: auto;
             padding: 20px;
             background: white;
             border-radius: 10px;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
+
+        .container.blur {
+            filter: blur(5px);
+            pointer-events: none;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 5;
+            display: none;
+        }
+
         .balance {
             background: blue;
             color: white;
             padding: 10px;
             border-radius: 10px;
         }
-        .colors button, .numbers button {
+
+        .colors button,
+        .numbers button,
+        .big-small button {
             width: 100px;
             height: 50px;
             margin: 5px;
@@ -38,29 +58,105 @@
             border-radius: 5px;
             color: white;
         }
-        .red { background-color: red; }
-        .green { background-color: green; }
-        .violet { background-color: purple; }
-        .numbers button { background-color: purple; width: 60px; }
+
+        .red {
+            background-color: red;
+        }
+
+        .green {
+            background-color: green;
+        }
+
+        .violet {
+            background-color: purple;
+        }
+
+        .big-small button {
+            background-color: orange;
+        }
+
+        .numbers button {
+            background-color: purple;
+            width: 60px;
+        }
+
         .timer {
             font-size: 20px;
             margin: 10px 0;
         }
+
         table {
             width: 100%;
             margin-top: 20px;
             border-collapse: collapse;
         }
-        table, th, td {
+
+        table,
+        th,
+        td {
             border: 1px solid black;
         }
-        th, td {
+
+        th,
+        td {
             padding: 10px;
             text-align: center;
         }
+
+        /* Parent wrapper to create a localized blur effect */
+        .bet-box-wrapper {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            /* Adjust height to match bet box */
+            z-index: 5;
+            backdrop-filter: blur(5px);
+            /* Apply blur only to this part */
+            display: none;
+            /* Initially hidden */
+        }
+
+        /* Bet box remains inside the wrapper */
+        .bet-box {
+            position: relative;
+            top: 35px;
+            left: 0;
+            width: 92%;
+            background: white;
+            box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            transition: bottom 0.5s ease-in-out;
+            text-align: center;
+            z-index: 10;
+        }
+
+        button:disabled {
+            background-color: grey;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+
+        .bet-box input,
+        .bet-box select,
+        .bet-box button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .bet-box input {
+            width: 100px;
+        }
     </style>
 </head>
+
 <body>
+    <div class="overlay" id="overlay"></div>
     <div class="container">
         <div class="balance">
             <h3>Available Balance: ₹<span id="balance">1000</span></h3>
@@ -75,7 +171,10 @@
             <button class="violet" onclick="placeBet('violet')">Join Violet</button>
             <button class="red" onclick="placeBet('red')">Join Red</button>
         </div>
-        <hr>
+        <div class="big-small">
+            <button onclick="placeBet('Big')">Big</button>
+            <button onclick="placeBet('Small')">Small</button>
+        </div>
         <div class="numbers">
             <button onclick="placeBet(0)">0</button>
             <button onclick="placeBet(1)">1</button>
@@ -95,13 +194,26 @@
                     <th>S.No</th>
                     <th>Winning Number</th>
                     <th>Winning Color</th>
+                    <th>Winning Big/Small</th>
                     <th>Result</th>
                 </tr>
             </thead>
             <tbody id="resultTable"></tbody>
         </table>
+        <div class="bet-box-wrapper" id="betBoxWrapper">
+            <div class="bet-box" id="betBox">
+                <h3>Place Your Bet</h3>
+                <input type="number" id="betAmount" placeholder="Bet Amount">
+                <select id="betMultiplier">
+                    <option value="1">1X</option>
+                    <option value="3">3X</option>
+                    <option value="5">5X</option>
+                    <option value="100">100X</option>
+                </select>
+                <button onclick="submitBet()">Place Bet</button>
+            </div>
+        </div>
     </div>
-
     <script>
         let balance = 1000;
         let countdown = 60;
@@ -113,6 +225,11 @@
             let minutes = Math.floor(countdown / 60);
             let seconds = countdown % 60;
             document.getElementById("countdown").textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            if (countdown <= 30) {
+                document.querySelectorAll(".colors button, .big-small button, .numbers button").forEach(button => {
+                    button.disabled = true;
+                });
+            }
             if (countdown > 0) {
                 countdown--;
                 setTimeout(updateCountdown, 1000);
@@ -124,57 +241,129 @@
 
         function placeBet(choice) {
             if (!bettingAllowed) {
-                alert("You have already placed a bet. Wait for the result.");
-                return;
+                return; // No alert, just prevent further action
             }
-            if (countdown <= 30) {
-                alert("Betting is closed for this round.");
-                return;
-            }
-            let betAmount = parseInt(prompt("Enter your bet amount:"));
+
+
+            const betBoxWrapper = document.getElementById("betBoxWrapper");
+            const betBox = document.getElementById("betBox");
+
+            betBoxWrapper.style.display = "block"; // Show the blurred wrapper
+            setTimeout(() => {
+                betBox.style.bottom = "0"; // Slide up the bet box
+            }, 10);
+
+            betBox.dataset.choice = choice;
+
+            // Disable all betting buttons
+            document.querySelectorAll(".colors button, .big-small button, .numbers button").forEach(button => {
+                button.disabled = true;
+            });
+        }
+
+        function submitBet() {
+            const betBoxWrapper = document.getElementById("betBoxWrapper");
+            const betBox = document.getElementById("betBox");
+            const choice = betBox.dataset.choice;
+
+            const betAmount = parseInt(document.getElementById("betAmount").value);
+            const multiplier = parseInt(document.getElementById("betMultiplier").value);
+
             if (isNaN(betAmount) || betAmount <= 0 || betAmount > balance) {
                 alert("Invalid bet amount!");
                 return;
             }
-            userBets.push({ choice, betAmount });
+
+            // Only deduct the base bet amount
             balance -= betAmount;
             document.getElementById("balance").textContent = balance;
+
+            // Push the bet details including the multiplier
+            userBets.push({ choice, betAmount, multiplier });
             bettingAllowed = false;
-            alert(`Bet placed on ${choice} with ₹${betAmount}`);
+
+            alert(`Bet placed on ${choice} with ₹${betAmount} (${multiplier}X)`);
+
+            betBox.style.bottom = "-200px"; // Slide down the bet box
+            setTimeout(() => {
+                betBoxWrapper.style.display = "none"; // Hide the wrapper
+            }, 500);
         }
 
         function showResults() {
             const colors = ['red', 'green', 'violet'];
             const randomColor = colors[Math.floor(Math.random() * colors.length)];
             const randomNumber = Math.floor(Math.random() * 10);
+            const bigSmall = randomNumber >= 5 ? 'Big' : 'Small';
+
             let totalWinnings = 0;
-            let userWin = "Lost";
-            
-            userBets.forEach(bet => {
-                if (bet.choice === randomColor || bet.choice === randomNumber) {
-                    totalWinnings += bet.betAmount * 2;
-                    userWin = "Won";
+            let userWin = "";
+
+            if (userBets.length > 0) {
+                userBets.forEach(bet => {
+                    if (bet.choice === randomColor || bet.choice === randomNumber || bet.choice === bigSmall) {
+                        // Calculate winnings based on the multiplier
+                        totalWinnings += bet.betAmount * bet.multiplier;
+                        userWin = "Won";
+                    }
+                });
+
+                if (!userWin) {
+                    userWin = "Lost";
                 }
-            });
-            
+            }
+
+            // Add total winnings to the balance
             balance += totalWinnings;
             document.getElementById("balance").textContent = balance;
-            document.getElementById("result").textContent = `Winning Color: ${randomColor}, Winning Number: ${randomNumber}`;
-            
+            document.getElementById("result").textContent = `Winning Color: ${randomColor}, Winning Number: ${randomNumber}, Winning Big/Small: ${bigSmall}`;
+
             let resultTable = document.getElementById("resultTable");
-            let newRow = `<tr><td>${round}</td><td>${randomNumber}</td><td>${randomColor}</td><td>${userWin}</td></tr>`;
+            let resultText = userBets.length > 0 ? userWin : "No Bet"; // If no bets, show "No Bet"
+            let newRow = `<tr>
+        <td>${round}</td>
+        <td>${randomNumber}</td>
+        <td>${randomColor}</td>
+        <td>${bigSmall}</td>
+        <td>${resultText}</td>
+    </tr>`;
             resultTable.innerHTML += newRow;
+
             round++;
-            
             userBets = [];
             bettingAllowed = true;
-            
+
+            // Re-enable betting buttons for the next round
+            document.querySelectorAll(".colors button, .big-small button, .numbers button").forEach(button => {
+                button.disabled = false;
+            });
+
+            // Reset the countdown for the next round
             setTimeout(() => {
                 countdown = 60;
                 updateCountdown();
                 document.getElementById("result").textContent = "-";
             }, 5000);
         }
+
+
+
+        function recharge() {
+            let rechargeAmount = parseInt(prompt("Enter recharge amount:"));
+            if (isNaN(rechargeAmount) || rechargeAmount <= 0) {
+                alert("Invalid recharge amount!");
+                return;
+            }
+            balance += rechargeAmount;
+            document.getElementById("balance").textContent = balance;
+            alert(`₹${rechargeAmount} added to your balance!`);
+        }
+
+        function showRules() {
+            alert("Rules:\n1. Betting closes when the countdown is below 30 seconds.\n2. You can place a bet on colors, numbers, or Big/Small.\n3. Winning doubles your bet amount.");
+        }
+
     </script>
 </body>
+
 </html>
